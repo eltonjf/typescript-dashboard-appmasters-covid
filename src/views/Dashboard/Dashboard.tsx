@@ -79,8 +79,9 @@ interface State {
   data: Response;
   dataList: ResponseList[];
   dateUpdateList: string | Date;
-  dias: number;
+  
   dataDateList: ResponseList[][];
+  selectedDay: string;
   }
 
 class Dashboard extends React.Component<Props, State> {
@@ -101,8 +102,9 @@ class Dashboard extends React.Component<Props, State> {
       },
       dataList: [],
       dateUpdateList: '',
-      dias: 5,
+      
       dataDateList: [[]],
+      selectedDay: '5',
     };
 
   }
@@ -121,8 +123,8 @@ class Dashboard extends React.Component<Props, State> {
       const listDate: ResponseList[][] = [];
 
       const today = moment(new Date());
-      //const listOfDates  = [];
-      for(let i = 0; i < this.state.dias; i++){
+    const listOfDates  = [];
+      for(let i = 0; i < parseInt(this.state.selectedDay); i++){
         const responseList = await fetch(
           `https://covid19-brazil-api.now.sh/api/report/v1/brazil/${
             moment(today).subtract(i, 'days').format('YYYYMMDD')}`).then((resp) => resp.json()) as {
@@ -130,9 +132,9 @@ class Dashboard extends React.Component<Props, State> {
           }       
         listDate.unshift(responseList.data);
       }
-     // console.log(moment(today).subtract(1, 'days').format('YYYYMMDD'));
-
-      this.setState({data: response, dataList: responseList.data, dataDateList: listDate})
+     
+this.setState({data: response, dataList: responseList.data, dataDateList: listDate})
+      
   } 
 
   handleChangeState = async (value: string) => {
@@ -140,7 +142,27 @@ class Dashboard extends React.Component<Props, State> {
       `https://covid19-brazil-api.now.sh/api/report/v1/brazil/uf/${value}`
     ).then((resp) => resp.json())) as Response;
 
-    this.setState({ data: response, selectedState: value });
+    this.setState({ data: response, selectedState: value,  });
+  };
+
+  handleChangeDays = async (value: string) => {
+      
+    const listDate: ResponseList[][] = [];
+
+    const today = moment(new Date());
+
+    /* const dias:number = parseInt(value) > 0 ? parseInt(value) :  5; */
+
+    for(let i = 0; i < parseInt(value); i++){
+        const responseList = await fetch(
+          `https://covid19-brazil-api.now.sh/api/report/v1/brazil/${
+            moment(today).subtract(i, 'days').format('YYYYMMDD')}`).then((resp) => resp.json()) as {
+              data: ResponseList[];
+          }       
+        listDate.unshift(responseList.data);
+      }
+
+    this.setState({selectedDay: value, dataDateList: listDate });
   };
 
 
@@ -299,6 +321,33 @@ class Dashboard extends React.Component<Props, State> {
             </Card>
           </GridItem> */}
         </GridContainer>
+
+ <GridContainer>
+        <div style={{ padding: 20 }}>
+            <form>
+              <FormControl className={classes.formControl}>
+                <InputLabel htmlFor="days-simple">Selecione o número de Dias</InputLabel>
+                <Select
+                  value={this.state.selectedDay}
+                  onChange={(e) => this.handleChangeDays(e.target.value)}
+                  style={{ width: 200 }}
+                  inputProps={{
+                    name: "days",
+                    id: "days-simple",
+                  }}
+                >
+                  <MenuItem value="5">
+                    <em>5 dias</em>
+                  </MenuItem>
+                  <MenuItem value={"7"}>7 dias</MenuItem>
+                  <MenuItem value={"10"}>10 dias</MenuItem>
+                  <MenuItem value={"15"}>15 dias</MenuItem>
+                </Select>
+              </FormControl>
+            </form>
+          </div>
+          </GridContainer>
+
         <GridContainer>
           <GridItem xs={12} sm={12} md={12}>
           
@@ -331,7 +380,7 @@ class Dashboard extends React.Component<Props, State> {
                 />
               </CardHeader>
               <CardBody>
-                <h4 className={classes.cardTitle}>Total de óbitos nos últimos {this.state.dias} dias no Brasil</h4>
+                <h4 className={classes.cardTitle}>Total de óbitos nos últimos {this.state.selectedDay} dias no Brasil</h4>
                 {/* <p className={classes.cardCategory}>
                   <span className={classes.successText}>
                     <ArrowUpward className={classes.upArrowCardCategory} /> 55%
