@@ -79,9 +79,15 @@ interface State {
   data: Response;
   dataList: ResponseList[];
   dateUpdateList: string | Date;
-  
+  dataBox: ResponseListBox[];
   dataDateList: ResponseList[][];
   selectedDay: string;
+  }
+
+  interface ResponseListBox {
+    uf: string;
+    state: string;
+    uid: number;
   }
 
 class Dashboard extends React.Component<Props, State> {
@@ -102,7 +108,7 @@ class Dashboard extends React.Component<Props, State> {
       },
       dataList: [],
       dateUpdateList: '',
-      
+      dataBox: [],
       dataDateList: [[]],
       selectedDay: '5',
     };
@@ -110,30 +116,42 @@ class Dashboard extends React.Component<Props, State> {
   }
 
    componentDidMount  = async () =>  {
+    const responseBox = (await fetch(
+      "https://covid19-brazil-api.now.sh/api/report/v1"
+    ).then((resp) => resp.json())) as {
+      data: ResponseListBox[];
+    }
+
     const response = (await fetch(
-      "https://covid19-brazil-api.now.sh/api/report/v1/brazil/uf/mg"
+      `https://covid19-brazil-api.now.sh/api/report/v1/brazil/uf/${responseBox.data[0].uf}`
     ).then((resp) => resp.json())) as Response;
 
-      const responseList = (await fetch(
-          "https://covid19-brazil-api.now.sh/api/report/v1"
-        ).then((resp) =>resp.json())) as {
-          data: ResponseList[];
-      }
+    const responseList = (await fetch(
+        "https://covid19-brazil-api.now.sh/api/report/v1"
+      ).then((resp) =>resp.json())) as {
+        data: ResponseList[];
+    }
 
-      const listDate: ResponseList[][] = [];
+    const listDate: ResponseList[][] = [];
 
-      const today = moment(new Date());
+    const today = moment(new Date());
     const listOfDates  = [];
-      for(let i = 0; i < parseInt(this.state.selectedDay); i++){
+    let i = 1
+    
+    while(listDate.length < parseInt(this.state.selectedDay)){
         const responseList = await fetch(
           `https://covid19-brazil-api.now.sh/api/report/v1/brazil/${
             moment(today).subtract(i, 'days').format('YYYYMMDD')}`).then((resp) => resp.json()) as {
               data: ResponseList[];
           }       
-        listDate.unshift(responseList.data);
+
+          if(responseList.data.length > 0) listDate.unshift(responseList.data)
+          i++
       }
-     
-this.setState({data: response, dataList: responseList.data, dataDateList: listDate})
+    
+    this.setState({data: response, dataList: responseList.data, 
+              dataDateList: listDate, dataBox: responseBox.data,
+              selectedState: responseBox.data[0].uf})
       
   } 
 
@@ -150,16 +168,18 @@ this.setState({data: response, dataList: responseList.data, dataDateList: listDa
     const listDate: ResponseList[][] = [];
 
     const today = moment(new Date());
-
-    /* const dias:number = parseInt(value) > 0 ? parseInt(value) :  5; */
-
-    for(let i = 0; i < parseInt(value); i++){
+   
+    let i = 1
+    
+    while(listDate.length < parseInt(value)){
         const responseList = await fetch(
           `https://covid19-brazil-api.now.sh/api/report/v1/brazil/${
             moment(today).subtract(i, 'days').format('YYYYMMDD')}`).then((resp) => resp.json()) as {
               data: ResponseList[];
           }       
-        listDate.unshift(responseList.data);
+                  
+          if(responseList.data.length > 0) listDate.unshift(responseList.data)
+          i++
       }
 
     this.setState({selectedDay: value, dataDateList: listDate });
@@ -186,12 +206,18 @@ this.setState({data: response, dataList: responseList.data, dataDateList: listDa
                     id: "states-simple",
                   }}
                 >
-                  <MenuItem value="MG">
+                   
+                  {this.state.dataBox.map((item) => {
+                    return <MenuItem key={item.uid} value={item.uf}>{item.state}</MenuItem>
+                  })}
+
+
+                  {/* <MenuItem value="MG">
                     <em>Minas Gerais</em>
                   </MenuItem>
                   <MenuItem value={"RJ"}>Rio de Janeiro</MenuItem>
                   <MenuItem value={"ES"}>Espírito Santo</MenuItem>
-                  <MenuItem value={"SP"}>São Paulo</MenuItem>
+                  <MenuItem value={"SP"}>São Paulo</MenuItem> */}
                 </Select>
               </FormControl>
             </form>
